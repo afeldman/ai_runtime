@@ -1,5 +1,5 @@
-use serde::{Serialize, Deserialize};
 use ndarray::ArrayD;
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct InputSpec {
@@ -15,7 +15,10 @@ impl InputSpec {
         anyhow::ensure!(shape.len() == 4, "Input muss 4D (NCHW) sein");
         anyhow::ensure!(shape[0] == self.batch, "Batch size passt nicht");
         anyhow::ensure!(shape[1] == self.channels, "Channels passen nicht");
-        anyhow::ensure!(shape[2] == self.height && shape[3] == self.width, "H/W passen nicht");
+        anyhow::ensure!(
+            shape[2] == self.height && shape[3] == self.width,
+            "H/W passen nicht"
+        );
         anyhow::ensure!(dtype == self.dtype, "dtype passt nicht");
         Ok(())
     }
@@ -34,7 +37,6 @@ pub struct ModelCfg {
     pub output_names: Vec<String>,
     pub output_shapes: Vec<Vec<usize>>,
 }
-
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct InputCfg {
@@ -63,6 +65,7 @@ pub struct Config {
     pub input: InputCfg,
     pub queue: QueueCfg,
     pub redis: RedisCfg,
+    pub pipeline: PipelineConfig,
 }
 
 impl Config {
@@ -81,14 +84,21 @@ impl Config {
 
 #[derive(Debug, Clone)]
 pub struct Job {
-    pub id: String,             // z. B. UUID
-    pub tensor: ArrayD<f32>,    // NCHW; kann Batch 1 sein, wird in der Mainloop gestapelt
+    pub id: String,          // z. B. UUID
+    pub tensor: ArrayD<f32>, // NCHW; kann Batch 1 sein, wird in der Mainloop gestapelt
 }
-
 
 #[derive(Debug, Clone)]
 pub struct Batch {
     pub ids: Vec<String>,
-    pub tensor: ArrayD<f32>,    // NCHW; N == ids.len()
+    pub tensor: ArrayD<f32>, // NCHW; N == ids.len()
     pub actual_len: usize,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct PipelineConfig {
+    #[serde(default)]
+    pub pre: Vec<String>,
+    #[serde(default)]
+    pub post: Vec<String>,
 }

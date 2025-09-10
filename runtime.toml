@@ -17,3 +17,13 @@ max_wait_ms = 10
 [redis]
 url = "redis://127.0.0.1/"
 out_prefix = "inference:out"
+
+[pipeline]
+pre = [
+    "normalize(mean=0.5,std=0.5)",
+    "resize(224,224)"
+]
+post = [
+    "softmax",
+    "argmax"
+]

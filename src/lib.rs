@@ -7,8 +7,9 @@ mod pipeline;
 
 use crate::storage::redis_store::RedisStorage;
 use crate::types::{Config, Job};
-use crate::pipeline::Pipeline;
+pub mod scripting;
 
+use pipeline::Pipeline;
 use tokio::sync::mpsc;
 use tracing::{info, Level};
 use tracing_subscriber::EnvFilter;
@@ -30,7 +31,7 @@ pub async fn start_runtime() -> Result<()> {
     let store = RedisStorage::new(&cfg.redis.url, cfg.redis.out_prefix.clone())?;
 
     // Pipeline als Arc (wird zwischen Workern geteilt)
-    let pipeline = Pipeline::new();
+    let pipeline = Arc::new(Pipeline::new(None, None));
 
     // Input-Queue
     let (tx, rx_main) = mpsc::channel::<Job>(1024);

@@ -6,6 +6,8 @@ pub mod onnx;
 pub mod tensorrt;
 #[cfg(feature = "torch")]
 pub mod torch;
+#[cfg(feature = "tensorflow")]
+pub mod tensorflow;
 
 pub trait Engine: Send + Sync {
     fn name(&self) -> &'static str;
@@ -24,6 +26,9 @@ impl EngineFactory {
 
             #[cfg(feature = "torch")]
             "torch" => Ok(Box::new(crate::engine::torch::TorchEngine::new(cfg, device_id)?)),
+
+            #[cfg(feature = "tensorflow")]
+            "tensorflow" => Ok(Box::new(crate::engine::tensorflow::TfEngine::new(cfg, device_id)?)),
 
             other => anyhow::bail!(
                 "Backend '{}' nicht unterstützt (build mit features: onnx, tensorrt, torch)",
