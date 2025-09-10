@@ -1,8 +1,17 @@
+#[cfg(feature = "tensorrt")]
 use anyhow::{Result, Context};
-use serde_json::json;
-use ndarray::ArrayD;
+use ndarray::{ArrayD, IxDyn};
 use crate::types::Config;
 use super::Engine;
+
+pub struct TrtEngine {
+    engine: tensorrt_rs::Engine,
+    context: tensorrt_rs::ExecutionContext,
+    device_id: i32,
+    input_names: Vec<String>,
+    output_names: Vec<String>,
+    output_shapes: Vec<Vec<usize>>,
+}
 
 impl TrtEngine {
     pub fn new(cfg: &Config, device_id: Option<usize>) -> Result<Self> {
@@ -18,7 +27,6 @@ impl TrtEngine {
         let context = engine.create_execution_context()
             .context("TensorRT: ExecutionContext erstellen fehlgeschlagen")?;
 
-        // Validate I/O
         anyhow::ensure!(
             cfg.model.input_names.len() == cfg.model.input_shapes.len(),
             "input_names und input_shapes haben unterschiedliche Länge"
@@ -28,14 +36,21 @@ impl TrtEngine {
             "output_names und output_shapes haben unterschiedliche Länge"
         );
 
-        Ok(Self { engine, context, device_id: gpu_id })
+        Ok(Self {
+            engine,
+            context,
+            device_id: gpu_id,
+            input_names: cfg.model.input_names.clone(),
+            output_names: cfg.model.output_names.clone(),
+            output_shapes: cfg.model.output_shapes.clone(),
+        })
     }
 }
 
 impl Engine for TrtEngine {
     fn name(&self) -> &'static str { "tensorrt" }
 
-    fn infer_array(&self, input: ArrayD<f32>) -> Result<ArrayD<f32>> {
+    fn infer_array(&mut self, input: ArrayD<f32>) -> Result<ArrayD<f32>> {
         unsafe {
             let res = cuda_sys::cuda::cudaSetDevice(self.device_id);
             anyhow::ensure!(res == 0, "cudaSetDevice({}) fehlgeschlagen, code={}", self.device_id, res);
@@ -44,17 +59,15 @@ impl Engine for TrtEngine {
         let shape: Vec<i32> = input.shape().iter().map(|&d| d as i32).collect();
         let mut bindings = self.engine.allocate_bindings()?;
 
-        // hier erster Input-Name aus Config
-        let in_name = &cfg.model.input_names[0];
+        let in_name = &self.input_names[0];
         bindings.set_input(in_name, input.as_slice().unwrap(), &shape)?;
 
         self.context.enqueue(&mut bindings)?;
 
-        // erster Output aus Config
-        let out_name = &cfg.model.output_names[0];
+        let out_name = &self.output_names[0];
         let output: Vec<f32> = bindings.get_output(out_name)?;
+        let out_shape = IxDyn(&self.output_shapes[0]);
 
-        let out_shape = cfg.model.output_shapes[0].clone();
         let arr = ArrayD::from_shape_vec(out_shape, output)?;
         Ok(arr)
     }

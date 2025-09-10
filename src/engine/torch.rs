@@ -1,10 +1,10 @@
-use anyhow::{Result, Context};
-use serde_json::json;
+use anyhow::{Context, Result};
 use ndarray::ArrayD;
 use tch::{CModule, Device as TchDevice, Tensor, kind::Kind};
 use crate::types::Config;
 use super::Engine;
 
+/// TorchScript Engine
 pub struct TorchEngine {
     module: CModule,
     device: TchDevice,
@@ -16,18 +16,18 @@ pub struct TorchEngine {
 
 impl TorchEngine {
     pub fn new(cfg: &Config, device_id: Option<usize>) -> Result<Self> {
-        // Device
+        // Device wählen
         let device = match cfg.model.device.to_lowercase().as_str() {
             "cpu" => TchDevice::Cpu,
             "gpu" => TchDevice::Cuda(device_id.unwrap_or(0) as i32),
             _ => TchDevice::Cpu,
         };
 
-        // TorchScript Modul laden
+        // TorchScript Modell laden
         let module = CModule::load_on_device(&cfg.model.model_path, device)
             .with_context(|| format!("TorchScript: Modell laden fehlgeschlagen: {}", cfg.model.model_path))?;
 
-        // Validierung: input_names vs input_shapes, output_names vs output_shapes
+        // Konsistenz-Check
         anyhow::ensure!(
             cfg.model.input_names.len() == cfg.model.input_shapes.len(),
             "Torch: input_names und input_shapes haben unterschiedliche Länge"
@@ -52,13 +52,12 @@ impl Engine for TorchEngine {
     fn name(&self) -> &'static str { "torch" }
 
     fn infer_array(&self, input: ArrayD<f32>) -> Result<ArrayD<f32>> {
-        // Input-Shape prüfen gegen Config
+        // Input-Shape validieren
         let expected = &self.input_shapes[0];
         anyhow::ensure!(
             input.shape() == expected.as_slice(),
             "Torch: Input-Shape passt nicht. Erwartet {:?}, bekommen {:?}",
-            expected,
-            input.shape()
+            expected, input.shape()
         );
 
         // Input nach Tensor
@@ -67,10 +66,10 @@ impl Engine for TorchEngine {
             .to_kind(Kind::Float)
             .reshape(&expected.iter().map(|&d| d as i64).collect::<Vec<_>>());
 
-        // Forward
+        // Forward Pass
         let output = self.module.forward_ts(&[tensor])?;
 
-        // Erstes Output extrahieren
+        // TorchScript gibt oft Tuple zurück, aber `forward_ts` gibt Vec<Tensor>
         let out0 = output[0].to_device(TchDevice::Cpu);
         let out_vec: Vec<f32> = Vec::<f32>::from(out0);
 
