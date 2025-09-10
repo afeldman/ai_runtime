@@ -85,7 +85,8 @@ pub struct Job {
     pub tensor: ArrayD<f32>,    // NCHW; kann Batch 1 sein, wird in der Mainloop gestapelt
 }
 
-#[derive(Debug)]
+
+#[derive(Debug, Clone)]
 pub struct Batch {
     pub ids: Vec<String>,
     pub tensor: ArrayD<f32>,    // NCHW; N == ids.len()

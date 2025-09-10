@@ -14,7 +14,7 @@ impl RedisStorage {
     }
 
     pub async fn store_json<T: Serialize>(&self, job_id: &str, value: &T) -> Result<()> {
-        let mut con = self.client.get_async_connection().await?;
+        let mut con = self.client.get_multiplexed_async_connection().await?;
         let key = format!("{}:{}", self.out_prefix, job_id);
         let payload = serde_json::to_string(value)?;
         con.set::<_, _, ()>(key, payload).await?;

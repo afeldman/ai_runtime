@@ -96,7 +96,7 @@ impl Engine for OnnxEngine {
         ])?;
 
         // Erstes Output holen (per Name oder Index) und in Array konvertieren
-        let dyn_out: &DynValue = &outputs[0]; // oder: &outputs[&*self.output_names[0]]
+        let dyn_out: &DynValue = &outputs[&*self.output_names[0]];
         let out_view = dyn_out
             .try_extract_array()
             .map_err(|_| anyhow::anyhow!("ONNX: Output ist kein Tensor<f32>"))?;
