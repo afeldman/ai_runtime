@@ -35,17 +35,16 @@ pub async fn run_gpu_worker(
             break; // Channel geschlossen
         };
 
+        let Batch { ids, tensor, actual_len } = batch;
+
         // Preprocessing
-        let x = pipeline.run_pre(batch.tensor.clone())?;
+        let x = pipeline.run_pre(tensor)?;
         spec.validate(x.shape(), "f32")?;
-
-        // Inferenz
         let y = engine.infer_array(x)?;
-
-        // Postprocessing
         let y = pipeline.run_post(y)?;
 
-        // Ergebnisse in Redis speichern
+        // Batch "rekonstruieren", nur mit neuen Tensor-Werten
+        let batch = Batch { ids, tensor: y.clone(), actual_len };
         write_outputs(&store, &batch, y).await?;
     }
 
