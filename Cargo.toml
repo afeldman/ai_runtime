@@ -41,3 +41,7 @@ crate-type = ["cdylib", "rlib"]
 
 [package.metadata.maturin]
 name = "omniengine"
+
+[[bin]]
+name = "omniengine-cli"
+path = "src/main.rs"             # dein CLI Einstiegspunkt

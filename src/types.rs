@@ -65,7 +65,6 @@ pub struct Config {
     pub input: InputCfg,
     pub queue: QueueCfg,
     pub redis: RedisCfg,
-    pub pipeline: PipelineConfig,
 }
 
 impl Config {
@@ -95,10 +94,3 @@ pub struct Batch {
     pub actual_len: usize,
 }
 
-#[derive(Debug, Clone, Deserialize)]
-pub struct PipelineConfig {
-    #[serde(default)]
-    pub pre: Vec<String>,
-    #[serde(default)]
-    pub post: Vec<String>,
-}
