@@ -1,0 +1,47 @@
+[package]
+name = "omniengine"
+version = "0.1.0"
+edition = "2021"
+authors = ["Anton Feldmann <anton.feldmann»gmail.com>"]
+
+[dependencies]
+anyhow = "1"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "time", "sync"] }
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+redis = { version = "0.27", features = ["tokio-comp"] }
+toml = "0.8"
+chrono = { version = "0.4", features = ["serde"] }
+ndarray = "0.16"
+numpy   = { version = "0.22" }
+pyo3 = { version = "0.22", features = ["extension-module"] }
+
+# Backends (optional)
+ort = { version = "2.0.0-rc.10", features = ["download-binaries", "ndarray"], optional = true }
+tensorrt-rs = { version = "0.3.0", optional = true }
+tch = { version = "0.14", optional = true }
+tensorflow = { version = "0.21.0", optional = true }
+
+[features]
+default = ["onnx"]
+onnx = ["ort"]
+tensorrt = ["tensorrt-rs"]
+onnx-cuda = ["onnx", "ort/cuda"]
+torch = ["tch"]
+tensorflow = ["dep:tensorflow"]
+
+all = ["onnx", "tensorrt", "onnx-cuda", "torch", "tensorflow"]
+
+
+[lib]
+name = "omniengine"
+crate-type = ["cdylib", "rlib"]
+
+[package.metadata.maturin]
+name = "omniengine"
+
+[[bin]]
+name = "omniengine-cli"
+path = "src/main.rs"             # dein CLI Einstiegspunkt

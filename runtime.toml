@@ -1,0 +1,19 @@
+[model]
+backend = "onnx"
+device = "cpu"
+model_path = "models/mnist.onnx"
+gpu_ids = []
+
+input_names = ["input"]
+input_shapes = [[1, 1, 28, 28]]
+
+output_names = ["output"]
+output_shapes = [[1, 10]]
+
+[queue]
+max_batch = 1
+max_wait_ms = 10
+
+[redis]
+url = "redis://127.0.0.1/"
+out_prefix = "inference:out"
