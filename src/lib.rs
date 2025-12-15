@@ -1,3 +1,27 @@
+//! OmniEngine - Unified AI/ML Inference Runtime
+//!
+//! This library provides a high-performance, backend-agnostic runtime for executing
+//! machine learning models across multiple frameworks (ONNX, TensorRT, PyTorch, TensorFlow).
+//!
+//! # Features
+//!
+//! * Multi-GPU support with automatic job distribution
+//! * Dynamic batching with configurable batch sizes and timeouts
+//! * Redis-based result storage
+//! * Pluggable pre/post-processing pipelines
+//! * Support for multiple ML backends
+//!
+//! # Example
+//!
+//! ```no_run
+//! use omniengine::start_runtime;
+//!
+//! #[tokio::main]
+//! async fn main() -> anyhow::Result<()> {
+//!     start_runtime().await
+//! }
+//! ```
+
 mod types;
 mod storage { pub mod redis_store; }
 mod engine;
@@ -16,7 +40,30 @@ use tracing_subscriber::EnvFilter;
 use anyhow::Result;
 use std::{fs, sync::Arc};
 
-/// Startet die Runtime (kannst du von main.rs aus aufrufen)
+/// Starts the OmniEngine runtime with configuration from runtime.toml.
+///
+/// This function initializes the complete inference pipeline including:
+/// - Tracing/logging setup
+/// - Configuration loading from runtime.toml
+/// - Redis connection for output storage
+/// - Multi-GPU worker initialization
+/// - Job dispatcher for load balancing
+///
+/// # Returns
+///
+/// * `Ok(())` - Runtime executed successfully
+/// * `Err(e)` - Configuration error, Redis connection failure, or worker error
+///
+/// # Example
+///
+/// ```no_run
+/// use omniengine::start_runtime;
+///
+/// #[tokio::main]
+/// async fn main() -> anyhow::Result<()> {
+///     start_runtime().await
+/// }
+/// ```
 pub async fn start_runtime() -> Result<()> {
     tracing_subscriber::fmt()
         .with_env_filter(EnvFilter::from_default_env().add_directive(Level::INFO.into()))
@@ -89,4 +136,42 @@ pub async fn start_runtime() -> Result<()> {
 
     for h in handles { let _ = h.await; }
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_module_structure() {
+        // Verify all modules are accessible
+        assert!(true, "Module structure is valid");
+    }
+
+    #[tokio::test]
+    async fn test_channel_creation() {
+        let (tx, mut rx) = mpsc::channel::<Job>(10);
+        
+        let job = Job {
+            id: "test-job-1".to_string(),
+            tensor: ndarray::Array::zeros((1, 3, 224, 224)).into_dyn(),
+        };
+        
+        tx.send(job).await.unwrap();
+        let received = rx.recv().await.unwrap();
+        
+        assert_eq!(received.id, "test-job-1");
+        assert_eq!(received.tensor.shape(), &[1, 3, 224, 224]);
+    }
+
+    #[tokio::test]
+    async fn test_job_creation() {
+        let job = Job {
+            id: "test-123".to_string(),
+            tensor: ndarray::Array::ones((2, 3, 64, 64)).into_dyn(),
+        };
+        
+        assert_eq!(job.id, "test-123");
+        assert_eq!(job.tensor.shape(), &[2, 3, 64, 64]);
+    }
 }

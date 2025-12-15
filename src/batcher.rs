@@ -1,14 +1,46 @@
+//! Dynamic batching implementation for efficient inference.
+//!
+//! This module provides functionality to collect individual jobs into batches
+//! with configurable size limits and timeouts. Smaller batches are padded to
+//! match the model's expected batch size.
+
 use crate::types::{Batch, Job};
 use anyhow::Result;
 use ndarray::{ArrayD, Axis, stack};
 use tokio::sync::mpsc;
 use tokio::time::{self, Duration};
 
-/// Sammelt Jobs zu einem Batch der Größe `spec_n`.
-/// - Holt blockierend mindestens ein Item.
-/// - Sammelt bis `max_batch` oder Timeout.
-/// - Füllt ggf. mit Null-Tensoren auf, bis `spec_n` erreicht.
-/// - Gibt `Batch { ids, tensor, actual_len }` zurück.
+/// Collects jobs into a batch of size `spec_n`.
+///
+/// This function implements dynamic batching by:
+/// 1. Blocking to receive at least one job
+/// 2. Collecting additional jobs up to `max_batch` or until timeout
+/// 3. Padding with zero tensors if needed to reach `spec_n`
+///
+/// # Arguments
+///
+/// * `spec_n` - Target batch size (required by model)
+/// * `rx` - Channel receiver for incoming jobs
+/// * `max_batch` - Maximum number of real jobs to collect
+/// * `max_wait_ms` - Maximum milliseconds to wait for additional jobs
+///
+/// # Returns
+///
+/// * `Ok(Some(Batch))` - Successfully created batch
+/// * `Ok(None)` - Channel closed, no more jobs
+/// * `Err(e)` - Error during batch construction
+///
+/// # Example
+///
+/// ```no_run
+/// use omniengine::batcher::collect_batch;
+/// use tokio::sync::mpsc;
+///
+/// # async fn example() {
+/// let (tx, mut rx) = mpsc::channel(100);
+/// let batch = collect_batch(4, &mut rx, 4, 100).await.unwrap();
+/// # }
+/// ```
 pub async fn collect_batch(
     spec_n: usize,
     rx: &mut mpsc::Receiver<Job>,
@@ -69,4 +101,78 @@ pub async fn collect_batch(
     );
 
     Ok(Some(Batch { ids, tensor: batch_tensor, actual_len }))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use ndarray::Array;
+
+    #[tokio::test]
+    async fn test_collect_batch_single_job() {
+        let (tx, mut rx) = mpsc::channel(10);
+        
+        let job = Job {
+            id: "job1".to_string(),
+            tensor: Array::zeros((1, 3, 64, 64)).into_dyn(),
+        };
+        
+        tx.send(job).await.unwrap();
+        drop(tx);
+        
+        let batch = collect_batch(4, &mut rx, 4, 100).await.unwrap().unwrap();
+        
+        assert_eq!(batch.actual_len, 1);
+        assert_eq!(batch.ids.len(), 4); // padded to spec_n
+        assert_eq!(batch.tensor.shape()[0], 4);
+    }
+
+    #[tokio::test]
+    async fn test_collect_batch_multiple_jobs() {
+        let (tx, mut rx) = mpsc::channel(10);
+        
+        for i in 0..3 {
+            let job = Job {
+                id: format!("job{}", i),
+                tensor: Array::ones((1, 3, 32, 32)).into_dyn(),
+            };
+            tx.send(job).await.unwrap();
+        }
+        drop(tx);
+        
+        let batch = collect_batch(4, &mut rx, 4, 100).await.unwrap().unwrap();
+        
+        assert_eq!(batch.actual_len, 3);
+        assert_eq!(batch.ids.len(), 4);
+        assert_eq!(batch.tensor.shape(), &[4, 1, 3, 32, 32]);
+    }
+
+    #[tokio::test]
+    async fn test_collect_batch_channel_closed() {
+        let (tx, mut rx) = mpsc::channel::<Job>(10);
+        drop(tx); // close channel immediately
+        
+        let result = collect_batch(4, &mut rx, 4, 100).await.unwrap();
+        
+        assert!(result.is_none());
+    }
+
+    #[tokio::test]
+    async fn test_collect_batch_max_batch_limit() {
+        let (tx, mut rx) = mpsc::channel(10);
+        
+        for i in 0..6 {
+            let job = Job {
+                id: format!("job{}", i),
+                tensor: Array::zeros((1, 1, 16, 16)).into_dyn(),
+            };
+            tx.send(job).await.unwrap();
+        }
+        
+        // max_batch is 4, so only first 4 should be collected
+        let batch = collect_batch(4, &mut rx, 4, 10).await.unwrap().unwrap();
+        
+        assert_eq!(batch.actual_len, 4);
+        assert_eq!(batch.ids.len(), 4);
+    }
 }
