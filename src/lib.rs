@@ -1,3 +1,6 @@
+#![doc(html_logo_url = "https://raw.githubusercontent.com/afeldman/ai_runtime/master/docs/logo.png")]
+#![doc(html_favicon_url = "https://raw.githubusercontent.com/afeldman/ai_runtime/master/docs/logo.png")]
+
 //! OmniEngine - Unified AI/ML Inference Runtime
 //!
 //! This library provides a high-performance, backend-agnostic runtime for executing

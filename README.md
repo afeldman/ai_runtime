@@ -1,6 +1,13 @@
 # OmniEngine
 
-⚡ A modular AI inference runtime for ONNX, TensorRT, TorchScript, and TensorFlow – with plugin-based pre/post-processing and Python scripting support.
+<p align="center">
+  <img src="docs/logo.png" alt="OmniEngine Logo" width="200"/>
+</p>
+
+<p align="center">
+  ⚡ A modular AI inference runtime for ONNX, TensorRT, TorchScript, and TensorFlow<br/>
+  with plugin-based pre/post-processing and Python scripting support.
+</p>
 
 ---
 
@@ -138,17 +145,27 @@ x = np.zeros((1, 1, 28, 28), dtype=np.float32)
 
 ## Documentation
 
-- Build API docs with rustdoc:
-  ```bash
-  cargo doc --no-deps --open
-  ```
-- Crate-level docs are available in the library entry point and per-module files:
-  - [src/lib.rs](src/lib.rs): overview and `start_runtime()`
-  - [src/engine/](src/engine): backends (`onnx`, `tensorrt`, `torch`, `tensorflow`)
-  - [src/pipeline.rs](src/pipeline.rs): pre/post-processing traits and `Pipeline`
-  - [src/batcher.rs](src/batcher.rs): dynamic batching
-  - [src/storage/redis_store.rs](src/storage/redis_store.rs): Redis integration
-  - [src/scripting/plugins.rs](src/scripting/plugins.rs): Python-backed processors (PyO3)
+Comprehensive documentation is available in the [docs/](docs/) directory:
+
+- **[Configuration Guide](docs/config.md)** - Runtime configuration and backend setup
+- **[Architecture](docs/architecture.md)** - System design and components
+- **[Examples](docs/examples.md)** - Usage examples and tutorials
+
+### API Documentation
+
+Build the API docs with rustdoc:
+
+```bash
+PYO3_USE_ABI3_FORWARD_COMPATIBILITY=1 cargo doc --no-deps --open
+```
+
+Module-level docs:
+- [src/lib.rs](src/lib.rs): overview and `start_runtime()`
+- [src/engine/](src/engine): backends (`onnx`, `tensorrt`, `torch`, `tensorflow`)
+- [src/pipeline.rs](src/pipeline.rs): pre/post-processing traits and `Pipeline`
+- [src/batcher.rs](src/batcher.rs): dynamic batching
+- [src/storage/redis_store.rs](src/storage/redis_store.rs): Redis integration
+- [src/scripting/plugins.rs](src/scripting/plugins.rs): Python-backed processors (PyO3)
 
 ## Roadmap
 
