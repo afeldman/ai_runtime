@@ -7,22 +7,26 @@
 ## Features
 
 - **Multi-backend Inference**
+
   - [ONNX Runtime](https://onnxruntime.ai/) (CPU, CUDA)
   - [NVIDIA TensorRT](https://developer.nvidia.com/tensorrt) (GPU, optimized)
   - [TorchScript](https://pytorch.org/docs/stable/jit.html) (CPU/GPU)
   - [TensorFlow](https://www.tensorflow.org/) (CPU/GPU)
 
 - **Batching**
-  - Dynamic job batching via Tokio channels  
+
+  - Dynamic job batching via Tokio channels
   - Automatic padding to fixed batch sizes
 
 - **Pipeline Plugins**
+
   - Pre- and post-processing as composable plugins
   - Built-in: `Normalize`, `Resize`, `Softmax`, `Argmax`
   - Python scripting support for custom plugins
   - Identity fallback (no-op)
 
 - **Redis Integration**
+
   - Job input/output exchange via Redis
   - JSON serialization of results
   - Timestamped results for downstream systems
@@ -45,16 +49,18 @@
      │      Dispatcher   │
      └──────┬────────────┘
             │ Round-robin
+
 ┌───────────┼─────────────┐
-▼           ▼             ▼
+▼ ▼ ▼
 Worker 0 Worker 1 ... Worker N
 (GPU/CPU) (GPU/CPU) (GPU/CPU)
-            └── Preprocess → Engine → Postprocess → Redis Output
+└── Preprocess → Engine → Postprocess → Redis Output
 ```
 
 ## Quickstart
 
 ### 1. Install dependencies
+
 Make sure you have Rust and Python set up:
 
 ```bash
@@ -68,10 +74,13 @@ pip install maturin
 ```
 
 ### 2. Build the library
+
 ```bash
 maturin develop --release
 ```
+
 ### 3. Run the runtime
+
 Create a runtime.toml:
 
 ```toml
@@ -100,6 +109,7 @@ cargo run --release
 ```
 
 #### Python Usage
+
 ```python
 import omniengine
 import numpy as np
@@ -112,20 +122,36 @@ x = np.zeros((1, 1, 28, 28), dtype=np.float32)
 ```
 
 ## Development
+
 - Run tests:
-    ```bash
-    cargo test
-    ```
+  ```bash
+  cargo test
+  ```
 - Format code:
-    ```bash
-    cargo fmt
-    ```
+  ```bash
+  cargo fmt
+  ```
 - Check lints:
-    ```bash
-    cargo clippy
-    ```
+  ```bash
+  cargo clippy
+  ```
+
+## Documentation
+
+- Build API docs with rustdoc:
+  ```bash
+  cargo doc --no-deps --open
+  ```
+- Crate-level docs are available in the library entry point and per-module files:
+  - [src/lib.rs](src/lib.rs): overview and `start_runtime()`
+  - [src/engine/](src/engine): backends (`onnx`, `tensorrt`, `torch`, `tensorflow`)
+  - [src/pipeline.rs](src/pipeline.rs): pre/post-processing traits and `Pipeline`
+  - [src/batcher.rs](src/batcher.rs): dynamic batching
+  - [src/storage/redis_store.rs](src/storage/redis_store.rs): Redis integration
+  - [src/scripting/plugins.rs](src/scripting/plugins.rs): Python-backed processors (PyO3)
 
 ## Roadmap
+
 - Add gRPC interface
 - Expand TensorFlow backend
 - Advanced batching strategies
@@ -133,4 +159,5 @@ x = np.zeros((1, 1, 28, 28), dtype=np.float32)
 - Kubernetes deployment templates
 
 ## License
+
 MIT License © 2025 Anton Feldmann

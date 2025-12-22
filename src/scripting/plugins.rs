@@ -1,3 +1,10 @@
+//! Python-backed pre/post-processing plugins.
+//!
+//! This module provides `Preprocessor` and `Postprocessor` implementations
+//! that call into Python functions via PyO3 and NumPy for data exchange.
+//! It is useful for rapid iteration on data transformations without
+//! recompiling Rust code.
+
 use anyhow::{Context, Result};
 use ndarray::{ArrayD, IxDyn};
 use numpy::{PyArrayDyn, PyReadonlyArrayDyn};
@@ -5,18 +12,20 @@ use pyo3::prelude::*;
 
 use crate::pipeline::{Postprocessor, Preprocessor};
 
+/// Python-based preprocessor calling a function from a Python module.
 pub struct PythonPreprocessor {
     module: Py<PyModule>,
     func_name: String,
 }
 
+/// Python-based postprocessor calling a function from a Python module.
 pub struct PythonPostprocessor {
     module: Py<PyModule>,
     func_name: String,
 }
 
 impl PythonPreprocessor {
-    /// Aus Python-Modul + Funktionsnamen bauen (z. B. module="my_plugins", func="normalize")
+    /// Construct from a Python module and function name (e.g. module="my_plugins", func="normalize").
     pub fn new(module: &str, func: &str) -> Result<Self> {
         Python::with_gil(|py| {
             let m = PyModule::import_bound(py, module)
@@ -25,7 +34,7 @@ impl PythonPreprocessor {
         })
     }
 
-    /// Fallback: Identity-Preprocessor
+    /// Fallback identity preprocessor that returns the input unchanged.
     pub fn identity() -> Self {
         Python::with_gil(|py| {
             let code = "def identity(x): return x";
@@ -37,6 +46,7 @@ impl PythonPreprocessor {
 }
 
 impl PythonPostprocessor {
+    /// Construct from a Python module and function name.
     pub fn new(module: &str, func: &str) -> Result<Self> {
         Python::with_gil(|py| {
             let m = PyModule::import_bound(py, module)
@@ -45,6 +55,7 @@ impl PythonPostprocessor {
         })
     }
 
+    /// Fallback identity postprocessor that returns the input unchanged.
     pub fn identity() -> Self {
         Python::with_gil(|py| {
             let code = "def identity(x): return x";

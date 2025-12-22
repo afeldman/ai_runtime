@@ -1,9 +1,15 @@
+//! TensorFlow engine using the `tensorflow` Rust bindings.
+//!
+//! This backend loads a TensorFlow graph and executes inference using a session.
+//! It expects model I/O names and shapes to be provided via configuration.
+
 use anyhow::{Context, Result};
 use ndarray::ArrayD;
 use tensorflow::{Graph, Session, SessionOptions, SessionRunArgs, Tensor as TfTensor};
 use crate::engine::Engine;
 use crate::types::Config;
 
+/// TensorFlow inference engine implementation.
 pub struct TfEngine {
     session: Session,
     input_names: Vec<String>,
@@ -13,6 +19,7 @@ pub struct TfEngine {
 }
 
 impl TfEngine {
+    /// Creates a new TensorFlow engine from the provided runtime configuration.
     pub fn new(cfg: &Config, _device_id: Option<usize>) -> Result<Self> {
         let mut graph = Graph::new();
         let session = Session::new(&SessionOptions::new(), &graph)
@@ -40,6 +47,7 @@ impl TfEngine {
 impl Engine for TfEngine {
     fn name(&self) -> &'static str { "tensorflow" }
 
+    /// Runs inference on the provided tensor using the configured graph/session.
     fn infer_array(&mut self, input: ArrayD<f32>) -> Result<ArrayD<f32>> {
         let expected = &self.input_shapes[0];
         anyhow::ensure!(

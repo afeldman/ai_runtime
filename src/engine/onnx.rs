@@ -1,15 +1,15 @@
-//! ONNX Runtime Engine (CPU/GPU via CUDA) für `ort = 2.0.0-rc.10`
+//! ONNX Runtime engine (CPU/GPU via CUDA) for `ort = 2.0.0-rc.10`.
 //!
-//! Highlights
-//! - Nutzt deine `ModelCfg` (Input-/Output-Namen & -Shapes).
-//! - Optionaler CUDA-Support via Feature `onnx-cuda`.
-//! - Läuft ohne native ONNX-Installation (Feature `download-binaries`).
+//! Highlights:
+//! - Uses `ModelCfg` for input/output names and shapes.
+//! - Optional CUDA support via feature `onnx-cuda`.
+//! - Can run without a system-wide ONNX installation (`download-binaries`).
 //!
-//! Hinweise zu ort v2:
-//! - `ort::init().commit()?` muss global vor der ersten Session aufgerufen werden.
-//! - `SessionBuilder::new()` + `commit_from_file` zum Laden.
-//! - Execution Provider CUDA wird nur registriert, wenn `onnx-cuda` aktiv und
-//!   `cfg.model.device == "gpu"` ist.
+//! Notes for `ort` v2:
+//! - Call `ort::init().commit()?` globally before creating the first session.
+//! - Use `SessionBuilder::new()` and `commit_from_file` to load the model.
+//! - CUDA execution provider is registered only if `onnx-cuda` is enabled and
+//!   `cfg.model.device == "gpu"`.
 
 use anyhow::{Context, Result};
 use ndarray::ArrayD;
@@ -21,6 +21,7 @@ use crate::engine::Engine;
 use crate::types::Config;
 use std::sync::Mutex;
 
+/// ONNX inference engine implementation.
 pub struct OnnxEngine {
     session: Mutex<Session>,
     input_names: Vec<String>,
@@ -30,6 +31,11 @@ pub struct OnnxEngine {
 }
 
 impl OnnxEngine {
+    /// Creates a new ONNX engine from the provided runtime configuration.
+    ///
+    /// The configuration must specify model path, I/O names and shapes, and
+    /// device selection (CPU/GPU). If the `onnx-cuda` feature is enabled and
+    /// `device` is GPU, the CUDA execution provider will be registered.
     pub fn new(cfg: &Config, _device_id: Option<usize>) -> Result<Self> {
         let mut builder = SessionBuilder::new()
             .with_context(|| "Fehler beim Erstellen des SessionBuilder")?;
@@ -71,6 +77,7 @@ impl OnnxEngine {
 impl Engine for OnnxEngine {
     fn name(&self) -> &'static str { "onnx" }
 
+    /// Runs inference on the provided input tensor and returns the output tensor.
     fn infer_array(&mut self, input: ArrayD<f32>) -> Result<ArrayD<f32>> {
         let mut session = self.session.lock().unwrap();
 

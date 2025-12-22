@@ -1,10 +1,15 @@
+//! TorchScript engine using `tch-rs`.
+//!
+//! Loads a TorchScript `CModule` and performs inference on CPU or CUDA devices.
+//! Input and output names/shapes are taken from the runtime configuration.
+
 use anyhow::{Context, Result};
 use ndarray::ArrayD;
 use tch::{CModule, Device as TchDevice, Tensor, kind::Kind};
 use crate::types::Config;
 use super::Engine;
 
-/// TorchScript Engine
+/// TorchScript inference engine.
 pub struct TorchEngine {
     module: CModule,
     device: TchDevice,
@@ -15,6 +20,7 @@ pub struct TorchEngine {
 }
 
 impl TorchEngine {
+    /// Creates a new TorchScript engine and loads the module on the selected device.
     pub fn new(cfg: &Config, device_id: Option<usize>) -> Result<Self> {
         // Device wählen
         let device = match cfg.model.device.to_lowercase().as_str() {
@@ -51,6 +57,7 @@ impl TorchEngine {
 impl Engine for TorchEngine {
     fn name(&self) -> &'static str { "torch" }
 
+    /// Runs inference using the loaded TorchScript module and returns the output tensor.
     fn infer_array(&self, input: ArrayD<f32>) -> Result<ArrayD<f32>> {
         // Input-Shape validieren
         let expected = &self.input_shapes[0];
