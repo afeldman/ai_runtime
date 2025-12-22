@@ -1,0 +1,60 @@
+name: CI
+
+on:
+  push:
+    branches: [ master, main ]
+  pull_request:
+    branches: [ master, main ]
+
+permissions:
+  contents: read
+
+jobs:
+  build-test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ai_runtime
+    env:
+      CARGO_TERM_COLOR: always
+      # Ensure PyO3 can build against runner Python and tolerate minor bumps
+      PYO3_USE_ABI3_FORWARD_COMPATIBILITY: "1"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Rust (stable)
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy, rustfmt
+
+      - name: Setup Python
+        id: python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Export PYO3_PYTHON
+        run: |
+          echo "PYO3_PYTHON=${{ steps.python.outputs.python-path }}" >> $GITHUB_ENV
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: |
+            . -> target
+
+      - name: Cargo fmt (check)
+        run: cargo fmt --all -- --check
+
+      - name: Build
+        run: cargo build --verbose
+
+      - name: Clippy
+        run: cargo clippy --all-targets -- -D warnings
+
+      - name: Test
+        run: cargo test --all --verbose
+
+      - name: Docs
+        run: cargo doc --no-deps
