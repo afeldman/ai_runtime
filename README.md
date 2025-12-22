@@ -58,7 +58,7 @@
             │ Round-robin
 
 ┌───────────┼─────────────┐
-▼ ▼ ▼
+▼           ▼             ▼
 Worker 0 Worker 1 ... Worker N
 (GPU/CPU) (GPU/CPU) (GPU/CPU)
 └── Preprocess → Engine → Postprocess → Redis Output
@@ -121,11 +121,35 @@ cargo run --release
 import omniengine
 import numpy as np
 
-# Example input
-x = np.zeros((1, 1, 28, 28), dtype=np.float32)
+# Direct inference using Python bindings
+engine = omniengine.PyOnnxEngine("runtime.toml")
+x = np.random.randn(1, 3, 224, 224).astype(np.float32)
+output = engine.infer(x)
+print(f"Output shape: {output.shape}")
 
-# Send job (via Redis) and read results
-# TODO: Example Python client
+# Alternatively, send jobs via Redis queue
+import redis
+import cbor2
+import uuid
+
+r = redis.Redis(host='localhost', port=6379, db=0)
+
+# Prepare job
+job_id = str(uuid.uuid4())
+job = {
+    "id": job_id,
+    "input": x.tobytes(),
+    "shape": list(x.shape),
+    "dtype": "f32"
+}
+
+# Submit to queue and wait for result
+r.lpush("inference_queue", cbor2.dumps(job))
+result = r.blpop(f"results:{job_id}", timeout=10)
+
+if result:
+    output_data = cbor2.loads(result[1])
+    print(f"Result: {output_data}")
 ```
 
 ## Development
@@ -160,6 +184,7 @@ PYO3_USE_ABI3_FORWARD_COMPATIBILITY=1 cargo doc --no-deps --open
 ```
 
 Module-level docs:
+
 - [src/lib.rs](src/lib.rs): overview and `start_runtime()`
 - [src/engine/](src/engine): backends (`onnx`, `tensorrt`, `torch`, `tensorflow`)
 - [src/pipeline.rs](src/pipeline.rs): pre/post-processing traits and `Pipeline`
